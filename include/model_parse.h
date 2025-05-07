@@ -1,0 +1,37 @@
+#pragma once
+#include "json.hpp"
+#include "tensor.h"
+#include <cassert>
+#include <fstream>
+#include <ios>
+#include <iostream>
+#include <string>
+
+class ModelParse {
+
+public:
+
+    void initModelPath(const std::string& path) {
+        fin.open(path, std::ios::binary);
+    }
+    void parse();
+
+    Tensor<float> getTensor(const std::string& name);
+
+
+private:
+
+    template<typename T>
+    void readArg(T&& arg) {
+        fin.read(reinterpret_cast<char*>(&arg), sizeof(arg));
+    }
+
+    template<typename T>
+    void read(T* p, int len) {
+        fin.read(reinterpret_cast<char*>(p), len * sizeof(T));
+    }
+
+    nlohmann::json model_json;
+    std::ifstream fin;
+    long long json_length;
+};
