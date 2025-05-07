@@ -1,0 +1,11 @@
+#pragma once
+#include "tensor.h"
+
+template<typename T>
+struct linear{
+    Tensor<T> forward(const Tensor<T>& input) {
+        return input * w + b;
+    }
+
+    Tensor<T> w, b;
+};

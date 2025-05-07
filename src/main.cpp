@@ -5,9 +5,7 @@
 using namespace std;
 int main()
 {
-    ModelParse model;
-    model.initModelPath("../model.safetensors");
-    model.parse();
+    ModelParse model("../model.safetensors");
     auto tensor = model.getTensor("h.0.attn.c_attn.weight");
     cout << tensor.at(333, 555) << endl;
 

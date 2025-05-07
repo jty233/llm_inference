@@ -10,11 +10,9 @@
 class ModelParse {
 
 public:
-
-    void initModelPath(const std::string& path) {
-        fin.open(path, std::ios::binary);
+    ModelParse(const std::string& path) : fin(path, std::ios::binary) {
+        parse();
     }
-    void parse();
 
     Tensor<float> getTensor(const std::string& name);
 
@@ -30,6 +28,7 @@ private:
     void read(T* p, int len) {
         fin.read(reinterpret_cast<char*>(p), len * sizeof(T));
     }
+    void parse();
 
     nlohmann::json model_json;
     std::ifstream fin;
