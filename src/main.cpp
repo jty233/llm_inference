@@ -4,6 +4,7 @@
 #include "model_parse.h"
 #include "tensor.h"
 #include "modules/linear.h"
+#include "module.h"
 using namespace std;
 int main()
 {

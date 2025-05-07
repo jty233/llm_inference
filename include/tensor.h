@@ -1,14 +1,16 @@
 #pragma once
 
 #include <cassert>
+#include <functional>
 #include <initializer_list>
 #include <utility>
 #include <vector>
-#define DIM_MAX 4
 
 template<typename T>
 class Tensor{
 public:
+    const int DIM_MAX = 4;
+
     Tensor(std::vector<T> data, std::vector<int> shape) :  data(std::move(data)), shape(std::move(shape)) {
         initShape();
     }
@@ -16,6 +18,9 @@ public:
     Tensor() = default;
 
     Tensor(Tensor&& oth) :  data(std::move(oth.data)), shape(std::move(oth.shape)), jump(std::move(oth.jump)) {
+    }
+
+    Tensor(const Tensor& oth) : data(oth.data), shape(oth.shape), jump(oth.jump) {
     }
 
     Tensor<T>& operator=(Tensor<T>&& oth) {
@@ -85,6 +90,20 @@ public:
         return data[idx];
     }
 
+    static void forEachDim(const std::vector<int>& dims, const std::function<void(const std::vector<int>)>& fun) {
+        static std::vector<int> cur_dim;
+
+        if (cur_dim.size() == dims.size()) {
+            fun(cur_dim);
+            return;
+        }
+        for (int i = 0; i < dims[cur_dim.size()]; i++) {
+            cur_dim.push_back(i);
+            forEachDim(dims, fun);
+            cur_dim.pop_back();
+        }
+    }
+
     Tensor<T> operator*(const Tensor<T>& oth) const {
         assert(shape[DIM_MAX - 1] == oth.shape[DIM_MAX - 2]);
         assert(checkBroadCastValid(oth, DIM_MAX - 2));
@@ -93,19 +112,21 @@ public:
         std::vector<int> new_shape{std::max(shape[0], oth.shape[0]), std::max(shape[1], oth.shape[1]), k, v};
         Tensor<T> res;
         res.asShape(new_shape);
-        for (int dim0 = 0; dim0 < new_shape[0]; dim0++) {
-            for (int dim1 = 0; dim1 < new_shape[1]; dim1++) {
-                for (int dim2 = 0; dim2 < k; dim2++) {
-                    for (int dim3 = 0; dim3 < v; dim3++) {
-                        T tmp = 0;
-                        for (int i = 0; i < u; i++) {
-                            tmp += at(dim0 % shape[0], dim1 % shape[1], dim2, i) * oth.at(dim0 % oth.shape[0], dim1 % oth.shape[1], i, dim3);
-                        }
-                        res.at(dim0, dim1, dim2, dim3) = tmp;
-                    }
-                }
+        forEachDim(new_shape, [&](const std::vector<int>& dim) {
+            T tmp = 0;
+            std::vector<int> dim_self, dim_oth;
+            for (int i = 0; i < DIM_MAX; i++) {
+                dim_self.push_back(dim[i] % shape[i]);
+                dim_oth.push_back(dim[i] % oth.shape[i]);
             }
-        }
+            for (int i = 0; i < u; i++) {
+                dim_self[DIM_MAX - 1] = i;
+                dim_oth[DIM_MAX - 2] = i;
+                tmp += at(dim_self) * oth.at(dim_oth);
+            }
+            res.at(dim) = tmp;
+        });
+        
         
         return res;
     }
@@ -118,16 +139,14 @@ public:
         }
         Tensor<T> res;
         res.asShape(new_shape);
-        for (int dim0 = 0; dim0 < new_shape[0]; dim0++) {
-            for (int dim1 = 0; dim1 < new_shape[1]; dim1++) {
-                for (int dim2 = 0; dim2 < new_shape[2]; dim2++) {
-                    for (int dim3 = 0; dim3 < new_shape[3]; dim3++) {
-                        res.at(dim0, dim1, dim2, dim3) = at(dim0 % shape[0], dim1 % shape[1], dim2 % shape[2], dim3 % shape[3]) +
-                         oth.at(dim0 % oth.shape[0], dim1 % oth.shape[1], dim2 % oth.shape[2], dim3 % oth.shape[3]);
-                    }
-                }
+        forEachDim(new_shape, [&](const std::vector<int>& dim) {
+            std::vector<int> dim_self, dim_oth;
+            for (int i = 0; i < DIM_MAX; i++) {
+                dim_self.push_back(dim[i] % shape[i]);
+                dim_oth.push_back(dim[i] % oth.shape[i]);
             }
-        }
+            res.at(dim) = at(dim_self) + oth.at(dim_oth);
+        });
         return res;
     }
 
