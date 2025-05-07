@@ -1,7 +1,9 @@
+#include <algorithm>
 #include <iostream>
 #include <vector>
 #include "model_parse.h"
 #include "tensor.h"
+#include "modules/linear.h"
 using namespace std;
 int main()
 {

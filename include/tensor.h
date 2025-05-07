@@ -2,8 +2,6 @@
 
 #include <cassert>
 #include <initializer_list>
-#include <numeric>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 #define DIM_MAX 4
@@ -24,6 +22,13 @@ public:
         data = std::move(oth.data);
         shape = std::move(oth.shape);
         jump = std::move(oth.jump);
+        return *this;
+    }
+
+    Tensor<T>& operator=(const Tensor<T>& oth) {
+        data = oth.data;
+        shape = oth.shape;
+        jump = oth.jump;
         return *this;
     }
 
@@ -80,7 +85,7 @@ public:
         return data[idx];
     }
 
-    Tensor<T> operator*(const Tensor<T>& oth) {
+    Tensor<T> operator*(const Tensor<T>& oth) const {
         assert(shape[DIM_MAX - 1] == oth.shape[DIM_MAX - 2]);
         assert(checkBroadCastValid(oth, DIM_MAX - 2));
 
@@ -138,7 +143,7 @@ public:
         }
     }
 
-    bool checkBroadCastValid(const Tensor<T>& oth, int checkDim) {
+    bool checkBroadCastValid(const Tensor<T>& oth, int checkDim) const {
         for (int idx = 0; idx < checkDim; idx++) {
             int max_shape = std::max(shape[idx], oth.shape[idx]);
             int min_shape = std::min(shape[idx], oth.shape[idx]);
