@@ -3,12 +3,14 @@
 #include "thread_pool.h"
 #include "time_calc.h"
 #include <cassert>
+#include <cstdio>
 #include <functional>
 #include <future>
 #include <iomanip>
 #include <ios>
 #include <iostream>
 #include <ostream>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -69,25 +71,21 @@ public:
         return at({args...});
     }
 
-    T& at(std::vector<int> idxs) {
-        while (idxs.size() < DIM_MAX) {
-            idxs.insert(idxs.begin(), 0);
-        }
+    T& at(const std::vector<int>& idxs) {
         int idx = 0;
-        for (int i = 0; i < DIM_MAX; i++) {
-            assert(idxs[i] >= 0 && idxs[i] < shape[i]);
-            idx += jump[i] * idxs[i];
+        int off = DIM_MAX - idxs.size();
+        for (int i = off; i < DIM_MAX; i++) {
+            assert(idxs[i - off] >= 0 && idxs[i - off] < shape[i]);
+            idx += jump[i] * idxs[i - off];
         }
         return data[idx];
     }
-    T at(std::vector<int> idxs) const {
-        while (idxs.size() < DIM_MAX) {
-            idxs.insert(idxs.begin(), 0);
-        }
+    T at(const std::vector<int>& idxs) const {
         int idx = 0;
-        for (int i = 0; i < DIM_MAX; i++) {
-            assert(idxs[i] >= 0 && idxs[i] < shape[i]);
-            idx += jump[i] * idxs[i];
+        int off = DIM_MAX - idxs.size();
+        for (int i = off; i < DIM_MAX; i++) {
+            assert(idxs[i - off] >= 0 && idxs[i - off] < shape[i]);
+            idx += jump[i] * idxs[i - off];
         }
         return data[idx];
     }
@@ -158,20 +156,27 @@ public:
     Tensor<T> operator+(const Tensor<T>& oth) {
         TimeCalcGuard g("operator +");
         assert(checkBroadCastValid(oth, DIM_MAX));
+        assert(shape.back() == oth.shape.back());
         std::vector<int> new_shape;
         for (int dim = 0; dim < DIM_MAX; dim++) {
             new_shape.push_back(std::max(shape[dim], oth.shape[dim]));
         }
         Tensor<T> res;
         res.asShape(new_shape);
+        int last_dim = new_shape.back();
+        new_shape.pop_back();
         forEachDim(new_shape, [&](std::vector<int> dim) {
             std::vector<int> dim_self, dim_oth;
-            for (int i = 0; i < DIM_MAX; i++) {
-                dim_self.push_back(dim[i] % shape[i]);
-                dim_oth.push_back(dim[i] % oth.shape[i]);
+            int addr_self = 0, addr_oth = 0, addr_res = 0;
+            for (int i = 0; i < DIM_MAX - 1; i++) {
+                addr_self += (dim[i] % shape[i]) * jump[i];
+                addr_oth += (dim[i] % oth.shape[i]) * oth.jump[i];
+                addr_res += dim[i] * res.jump[i];
             }
-            res.at(dim) = at(dim_self) + oth.at(dim_oth);
-        }, 1);
+            for (int i = 0; i < last_dim; i++) {
+                res.data[addr_res++] = data[addr_self++] + oth.data[addr_oth++];
+            }
+        }, -1);
         return res;
     }
 

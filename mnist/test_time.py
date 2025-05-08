@@ -34,6 +34,15 @@ class Net(nn.Module):
 
 
 if __name__ == '__main__':
+
+
+    a = np.random.randn(10000, 784)
+    b = np.random.rand(784, 500)
+    t_start = time()
+    c = a @ b
+    print(f"test took {time()-t_start:.2f}s")
+
+
     train_data = dsets.MNIST(root='./data', train=True, transform=transforms.ToTensor(), download=True)
     test_data  = dsets.MNIST(root='./data', train=False, transform=transforms.ToTensor())
 
@@ -47,9 +56,10 @@ if __name__ == '__main__':
 
     t_start = time()
 
-    for i, (images, labels) in enumerate(test_gen):
-        images = Variable(images.view(-1, 28*28))
-        labels = Variable(labels)
-        outputs = net(images)
+    with torch.no_grad():
+        for i, (images, labels) in enumerate(test_gen):
+            images = Variable(images.view(-1, 28*28))
+            labels = Variable(labels)
+            outputs = net(images)
 
     print(f"test took {time()-t_start:.2f}s")
