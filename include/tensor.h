@@ -1,10 +1,11 @@
 #pragma once
 
+#include "time_calc.h"
 #include <cassert>
 #include <functional>
-#include <initializer_list>
 #include <iomanip>
 #include <ios>
+#include <iostream>
 #include <ostream>
 #include <utility>
 #include <vector>
@@ -12,7 +13,7 @@
 template<typename T>
 class Tensor{
 public:
-    const int DIM_MAX = 4;
+    static const int DIM_MAX = 4;
 
     Tensor(std::vector<T> data, std::vector<int> shape) :  data(std::move(data)), shape(std::move(shape)) {
         initShape();
@@ -108,11 +109,17 @@ public:
     }
 
     Tensor<T> operator*(const Tensor<T>& oth) const {
+        TimeCalcGuard g("operator *");
         assert(shape[DIM_MAX - 1] == oth.shape[DIM_MAX - 2]);
         assert(checkBroadCastValid(oth, DIM_MAX - 2));
 
         int k = shape[DIM_MAX - 2], u = shape[DIM_MAX - 1], v = oth.shape[DIM_MAX - 1];
-        std::vector<int> new_shape{std::max(shape[0], oth.shape[0]), std::max(shape[1], oth.shape[1]), k, v};
+        std::vector<int> new_shape;
+        for (int i = 0; i < DIM_MAX - 2; i++) {
+            new_shape.push_back(std::max(shape[i], oth.shape[i]));
+        }
+        new_shape.push_back(k);
+        new_shape.push_back(v);
         Tensor<T> res;
         res.asShape(new_shape);
         forEachDim(new_shape, [&](const std::vector<int>& dim) {
@@ -135,6 +142,7 @@ public:
     }
 
     Tensor<T> operator+(const Tensor<T>& oth) {
+        TimeCalcGuard g("operator +");
         assert(checkBroadCastValid(oth, DIM_MAX));
         std::vector<int> new_shape;
         for (int dim = 0; dim < DIM_MAX; dim++) {

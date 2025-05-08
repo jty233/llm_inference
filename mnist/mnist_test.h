@@ -1,12 +1,17 @@
 #pragma once
+#include <chrono>
 #include <opencv2/opencv.hpp>
 #include "mnist.h"
 #include <iostream>
 #include <cstring>
+#include <ostream>
 #include <string>
+#include "time_calc.h"
 
 inline void mnist_test() {
+    startTimeCalc("mnist load");
     Mnist mnist("../mnist.safetensors");
+    finishTimeCalc();
     Tensor<float> t;
     t.asShape({10,28 * 28});
     cv::Mat img;
@@ -20,7 +25,8 @@ inline void mnist_test() {
         }
     }
     
-
+    startTimeCalc("mnist forward");
     auto res = mnist.forward(t);
-    std::cout << res << std::endl;
+    finishTimeCalc();
+    std::cout << res;
 }
