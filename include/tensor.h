@@ -3,6 +3,9 @@
 #include <cassert>
 #include <functional>
 #include <initializer_list>
+#include <iomanip>
+#include <ios>
+#include <ostream>
 #include <utility>
 #include <vector>
 
@@ -150,6 +153,36 @@ public:
         return res;
     }
 
+    Tensor<T> transpose() {
+        for (int i = 0; i < DIM_MAX - 2; i++) {
+            assert(shape[i] == 1);
+        }
+        std::vector<int> new_shape = shape;
+        std::swap(new_shape[DIM_MAX - 1], new_shape[DIM_MAX - 2]);
+        Tensor<T> res;
+        res.asShape(new_shape);
+        forEachDim(new_shape, [&](const std::vector<int>& dim) {
+            std::vector<int> ori_dim = dim;
+            std::swap(ori_dim[DIM_MAX - 1], ori_dim[DIM_MAX - 2]);
+            res.at(dim) = at(ori_dim);
+        });
+        return res;
+    }
+
+    friend std::ostream& operator<<(std::ostream& out, const Tensor<T>& ten) {
+        out << std::fixed << std::setprecision(4);
+        forEachDim(ten.shape, [&] (const std::vector<int>& dim) {
+            if (dim.back() == 0) {
+                out << '[';
+            }
+            else if (dim.back() == ten.shape.back() - 1) {
+                out << ten.at(dim) << ']' << std::endl;
+                return;
+            }
+            out << ten.at(dim) << ',';
+        });
+        return out;
+    }
 
     void initShape() {
         while (shape.size() < DIM_MAX) {

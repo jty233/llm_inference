@@ -2,7 +2,7 @@
 #include "tensor.h"
 
 template<typename T>
-struct linear{
+struct Linear{
     Tensor<T> forward(const Tensor<T>& input) {
         return input * w + b;
     }

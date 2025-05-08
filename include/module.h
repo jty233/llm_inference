@@ -24,6 +24,7 @@ Tensor<T> relu(const Tensor<T>& input) {
             x = 0;
         }
     }
+    return res;
 }
 
 

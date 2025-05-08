@@ -12,6 +12,8 @@ class ModelParse {
 public:
     ModelParse(const std::string& path) : fin(path, std::ios::binary) {
         parse();
+        std::ofstream fout(path + ".json");
+        fout << model_json.dump(4);
     }
 
     Tensor<float> getTensor(const std::string& name);
@@ -26,7 +28,7 @@ private:
 
     template<typename T>
     void read(T* p, int len) {
-        fin.read(reinterpret_cast<char*>(p), len * sizeof(T));
+        fin.read(reinterpret_cast<char*>(p), len);
     }
     void parse();
 

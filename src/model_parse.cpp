@@ -18,7 +18,7 @@ Tensor<float> ModelParse::getTensor(const std::string& name) {
     std::vector<int> shape = info["shape"];
     std::vector<long long> offset = info["data_offsets"];
     int len = offset[1] - offset[0];
-    fin.seekg(offset[0] + 8 + json_length);
+    fin.seekg(offset[0] + 8 + json_length, ios::beg);
     std::vector<float> val(len);
     read(val.data(), len);
     return {std::move(val), std::move(shape)};
