@@ -1,8 +1,10 @@
 #pragma once
 
+#include "thread_pool.h"
 #include "time_calc.h"
 #include <cassert>
 #include <functional>
+#include <future>
 #include <iomanip>
 #include <ios>
 #include <iostream>
@@ -94,17 +96,27 @@ public:
         return data[idx];
     }
 
-    static void forEachDim(const std::vector<int>& dims, const std::function<void(const std::vector<int>)>& fun) {
-        static std::vector<int> cur_dim;
-
+    static void forEachDim(const std::vector<int>& dims, const std::function<void(std::vector<int>)>& fun, int thread_level = -1, std::vector<int> cur_dim = {}) {
         if (cur_dim.size() == dims.size()) {
             fun(cur_dim);
             return;
         }
-        for (int i = 0; i < dims[cur_dim.size()]; i++) {
-            cur_dim.push_back(i);
-            forEachDim(dims, fun);
-            cur_dim.pop_back();
+        cur_dim.push_back(0);
+        for (int i = 0; i < dims[cur_dim.size() - 1]; i++) {
+            cur_dim.back() = i;
+            if (cur_dim.size() + thread_level == dims.size()) {
+                future_list.emplace_back(thread_pool.assign(forEachDim, dims, fun, thread_level, cur_dim));
+            }
+            else {
+                forEachDim(dims, fun, thread_level, cur_dim);
+            }
+        }
+
+        if (cur_dim.size() == 1) {
+            for (auto& f : future_list) {
+                f.get();
+            }
+            future_list.clear();
         }
     }
 
@@ -122,7 +134,7 @@ public:
         new_shape.push_back(v);
         Tensor<T> res;
         res.asShape(new_shape);
-        forEachDim(new_shape, [&](const std::vector<int>& dim) {
+        forEachDim(new_shape, [&](std::vector<int> dim) {
             T tmp = 0;
             std::vector<int> dim_self, dim_oth;
             for (int i = 0; i < DIM_MAX; i++) {
@@ -135,8 +147,7 @@ public:
                 tmp += at(dim_self) * oth.at(dim_oth);
             }
             res.at(dim) = tmp;
-        });
-        
+        }, 0);
         
         return res;
     }
@@ -150,18 +161,19 @@ public:
         }
         Tensor<T> res;
         res.asShape(new_shape);
-        forEachDim(new_shape, [&](const std::vector<int>& dim) {
+        forEachDim(new_shape, [&](std::vector<int> dim) {
             std::vector<int> dim_self, dim_oth;
             for (int i = 0; i < DIM_MAX; i++) {
                 dim_self.push_back(dim[i] % shape[i]);
                 dim_oth.push_back(dim[i] % oth.shape[i]);
             }
             res.at(dim) = at(dim_self) + oth.at(dim_oth);
-        });
+        }, 1);
         return res;
     }
 
     Tensor<T> transpose() {
+        TimeCalcGuard g("transpose");
         for (int i = 0; i < DIM_MAX - 2; i++) {
             assert(shape[i] == 1);
         }
@@ -169,17 +181,17 @@ public:
         std::swap(new_shape[DIM_MAX - 1], new_shape[DIM_MAX - 2]);
         Tensor<T> res;
         res.asShape(new_shape);
-        forEachDim(new_shape, [&](const std::vector<int>& dim) {
+        forEachDim(new_shape, [&](std::vector<int> dim) {
             std::vector<int> ori_dim = dim;
             std::swap(ori_dim[DIM_MAX - 1], ori_dim[DIM_MAX - 2]);
             res.at(dim) = at(ori_dim);
-        });
+        }, 1);
         return res;
     }
 
     friend std::ostream& operator<<(std::ostream& out, const Tensor<T>& ten) {
         out << std::fixed << std::setprecision(4);
-        forEachDim(ten.shape, [&] (const std::vector<int>& dim) {
+        forEachDim(ten.shape, [&] (std::vector<int> dim) {
             if (dim.back() == 0) {
                 out << '[';
             }
@@ -217,4 +229,6 @@ public:
     std::vector<T> data;
     std::vector<int> shape;
     std::vector<int> jump;
+    static inline ThreadPool& thread_pool = ThreadPool::getInstance();
+    static inline std::vector<std::future<void>> future_list;
 };

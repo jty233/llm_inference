@@ -23,12 +23,14 @@ inline void finishTimeCalc() {
 }
 
 struct TimeCalcGuard {
-    TimeCalcGuard(const std::string& name) : name(name), start_time(std::chrono::system_clock::now()) {}
+    TimeCalcGuard(const std::string& name, int precision = 3) : name(name), precision(precision), start_time(std::chrono::system_clock::now()) {}
     ~TimeCalcGuard() {
+        std::cout << std::fixed << std::setprecision(precision);
         std::cout << name << " use time: " << 
             std::chrono::duration<double>(std::chrono::system_clock::now() - start_time).count() << 's' << std::endl;
     }
 
     time_calc::time_point start_time;
     std::string name;
+    int precision;
 };

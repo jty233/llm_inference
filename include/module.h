@@ -1,7 +1,12 @@
 #pragma once
 #include "tensor.h"
+#include "time_calc.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
+#include <iostream>
+#include <ostream>
+#include <thread>
 #include <vector>
 
 template<typename T>
@@ -34,27 +39,24 @@ Tensor<T> softmax(const Tensor<T>& input) {
     Tensor<T> res = input;
     auto shape = res.shape;
     shape.pop_back();
-    Tensor<T>::forEachDim(shape, [&] (const std::vector<int>& dim_) {
-        auto dim = dim_;
+    Tensor<T>::forEachDim(shape, [&] (std::vector<int> dim) {
         T max_val = -1e9;
+        dim.push_back(0);
         for (int i = 0; i < res.shape.back(); i++) {
-            dim.push_back(i);
+            dim.back() = i;
             max_val = std::max(max_val, res.at(dim));
-            dim.pop_back();
         }
 
         double exp_sum = 0;
         for (int i = 0; i < res.shape.back(); i++) {
-            dim.push_back(i);
+            dim.back() = i;
             exp_sum += exp(res.at(dim));
-            dim.pop_back();
         }
 
         for (int i = 0; i < res.shape.back(); i++) {
-            dim.push_back(i);
+            dim.back() = i;
             res.at(dim) = exp(res.at(dim)) / exp_sum;
-            dim.pop_back();
         }
-    });
+    }, 0);
     return res;
 }
