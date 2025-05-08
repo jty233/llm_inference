@@ -13,6 +13,9 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#ifdef USE_SIMD
+#include <immintrin.h>
+#endif
 
 template<typename T>
 class Tensor{
@@ -132,23 +135,38 @@ public:
         new_shape.push_back(v);
         Tensor<T> res;
         res.asShape(new_shape);
+        new_shape.pop_back();
         forEachDim(new_shape, [&](std::vector<int> dim) {
-            T tmp = 0;
-            int addr_self = 0, addr_oth = 0;
-            for (int i = 0; i < DIM_MAX; i++) {
+            int addr_self = 0, addr_oth = 0, addr_res = 0;
+            for (int i = 0; i < DIM_MAX - 1; i++) {
                 addr_self += (dim[i] % shape[i]) * jump[i];
+                addr_res += dim[i] * res.jump[i];
+            }
+            for (int i = 0; i < DIM_MAX - 2; i++) {
                 addr_oth += (dim[i] % oth.shape[i]) * oth.jump[i];
             }
-            addr_self -= (dim[DIM_MAX - 1] % shape[DIM_MAX - 1]) * jump[DIM_MAX - 1];
-            addr_oth -= (dim[DIM_MAX - 2] % oth.shape[DIM_MAX - 2]) * oth.jump[DIM_MAX - 2];
-
             for (int i = 0; i < u; i++) {
-                tmp += data[addr_self] * oth.data[addr_oth];
-                addr_self += jump[DIM_MAX - 1];
+                auto val = data[addr_self + i];
+                #ifdef USE_SIMD
+                __m256 a_vec = _mm256_set1_ps(val);
+                int j = 0;
+                for (; j + 7 < v; j += 8) {
+                    __m256 b_vec = _mm256_loadu_ps(oth.data.data() + addr_oth + j);
+                    __m256 c_vec = _mm256_loadu_ps(res.data.data() + addr_res + j);
+                    c_vec = _mm256_fmadd_ps(a_vec, b_vec, c_vec);
+                    _mm256_storeu_ps(res.data.data() + addr_res + j, c_vec);
+                }
+                for (; j < v; ++j) {
+                    res.data[addr_res + j]  += val * oth.data[addr_oth + j];
+                }
+                #else
+                for (int j = 0; j < v; j++) {
+                    res.data[addr_res + j] += val * oth.data[addr_oth + j];
+                }
+                #endif
                 addr_oth += oth.jump[DIM_MAX - 2];
             }
-            res.at(dim) = tmp;
-        }, 1);
+        }, 0);
         
         return res;
     }
