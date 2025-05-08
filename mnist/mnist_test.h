@@ -1,12 +1,7 @@
 #pragma once
-#include <chrono>
 #include <opencv2/opencv.hpp>
 #include "mnist.h"
-#include <iostream>
-#include <cstring>
-#include <ostream>
 #include <string>
-#include "module.h"
 #include "time_calc.h"
 
 inline void mnist_test() {
@@ -14,7 +9,7 @@ inline void mnist_test() {
     Mnist mnist("../mnist.safetensors");
     finishTimeCalc();
     Tensor<float> t;
-    int batch_size = 100;
+    int batch_size = 10000;
     t.asShape({batch_size,28 * 28});
     cv::Mat img;
     for (int num = 0; num < batch_size; num++) {

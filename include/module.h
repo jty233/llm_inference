@@ -1,12 +1,7 @@
 #pragma once
 #include "tensor.h"
-#include "time_calc.h"
 #include <algorithm>
-#include <atomic>
 #include <cmath>
-#include <iostream>
-#include <ostream>
-#include <thread>
 #include <vector>
 
 template<typename T>

@@ -136,18 +136,21 @@ public:
         res.asShape(new_shape);
         forEachDim(new_shape, [&](std::vector<int> dim) {
             T tmp = 0;
-            std::vector<int> dim_self, dim_oth;
+            int addr_self = 0, addr_oth = 0;
             for (int i = 0; i < DIM_MAX; i++) {
-                dim_self.push_back(dim[i] % shape[i]);
-                dim_oth.push_back(dim[i] % oth.shape[i]);
+                addr_self += (dim[i] % shape[i]) * jump[i];
+                addr_oth += (dim[i] % oth.shape[i]) * oth.jump[i];
             }
+            addr_self -= (dim[DIM_MAX - 1] % shape[DIM_MAX - 1]) * jump[DIM_MAX - 1];
+            addr_oth -= (dim[DIM_MAX - 2] % oth.shape[DIM_MAX - 2]) * oth.jump[DIM_MAX - 2];
+
             for (int i = 0; i < u; i++) {
-                dim_self[DIM_MAX - 1] = i;
-                dim_oth[DIM_MAX - 2] = i;
-                tmp += at(dim_self) * oth.at(dim_oth);
+                tmp += data[addr_self] * oth.data[addr_oth];
+                addr_self += jump[DIM_MAX - 1];
+                addr_oth += oth.jump[DIM_MAX - 2];
             }
             res.at(dim) = tmp;
-        }, 0);
+        }, 1);
         
         return res;
     }
