@@ -7,10 +7,10 @@
 class Mnist {
 public:
     Mnist(const std::string& path) : parser(path) {
-        fc1.w = parser.getTensor("fc1.weight").transpose();
+        fc1.w = parser.getTensor("fc1.weight");
         fc1.b = parser.getTensor("fc1.bias");
 
-        fc2.w = parser.getTensor("fc2.weight").transpose();
+        fc2.w = parser.getTensor("fc2.weight");
         fc2.b = parser.getTensor("fc2.bias");
     }
 

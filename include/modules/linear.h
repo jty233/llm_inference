@@ -4,7 +4,7 @@
 template<typename T>
 struct Linear{
     Tensor<T> forward(const Tensor<T>& input) {
-        return input * w + b;
+        return input.matMulTranspos(w) + b;
     }
 
     Tensor<T> w, b;

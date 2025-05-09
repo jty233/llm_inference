@@ -9,15 +9,17 @@ inline void mnist_test() {
     Mnist mnist("../mnist.safetensors");
     finishTimeCalc();
     Tensor<float> t;
-    int batch_size = 10000;
+    int batch_size = 1000000;
     t.asShape({batch_size,28 * 28});
-    cv::Mat img;
+    cv::Mat img[10];
+    for (int num = 0; num < 10; num++) {
+        img[num] = cv::imread("../mnist/nums/" + std::to_string(num % 10) + ".png", cv::IMREAD_GRAYSCALE);
+        cv::resize(img[num], img[num], {28 , 28});
+    }
     for (int num = 0; num < batch_size; num++) {
-        img = cv::imread("../mnist/nums/" + std::to_string(num % 10) + ".png", cv::IMREAD_GRAYSCALE);
-        cv::resize(img, img, {28 , 28});
         for (int i = 0; i < 28; i++) {
             for (int j = 0; j < 28; j++) {
-                t.at(num, i * 28 + j) = img.at<uchar>(i, j) / 255.;
+                t.at(num, i * 28 + j) = img[num % 10].at<uchar>(i, j) / 255.;
             }
         }
     }

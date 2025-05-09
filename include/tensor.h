@@ -121,8 +121,8 @@ public:
         }
     }
 
-    Tensor<T> operator*(const Tensor<T>& oth) const {
-        TimeCalcGuard g("operator *");
+    Tensor<T> matMul(const Tensor<T>& oth) const {
+        TimeCalcGuard g("matMul");
         assert(shape[DIM_MAX - 1] == oth.shape[DIM_MAX - 2]);
         assert(checkBroadCastValid(oth, DIM_MAX - 2));
 
@@ -165,6 +165,52 @@ public:
                 }
                 #endif
                 addr_oth += oth.jump[DIM_MAX - 2];
+            }
+        }, 0);
+        
+        return res;
+    }
+
+    Tensor<T> matMulTranspos(const Tensor<T>& oth_T) const {
+        TimeCalcGuard g("matMulTranspos");
+        assert(shape[DIM_MAX - 1] == oth_T.shape[DIM_MAX - 1]);
+        assert(checkBroadCastValid(oth_T, DIM_MAX - 2));
+
+        int k = shape[DIM_MAX - 2], u = shape[DIM_MAX - 1], v = oth_T.shape[DIM_MAX - 2];
+        std::vector<int> new_shape;
+        for (int i = 0; i < DIM_MAX - 2; i++) {
+            new_shape.push_back(std::max(shape[i], oth_T.shape[i]));
+        }
+        new_shape.push_back(k);
+        new_shape.push_back(v);
+        Tensor<T> res;
+        res.asShape(new_shape);
+        new_shape.pop_back();
+        forEachDim(new_shape, [&](std::vector<int> dim) {
+            int addr_self = 0, addr_oth = 0, addr_res = 0;
+            for (int i = 0; i < DIM_MAX - 1; i++) {
+                addr_self += (dim[i] % shape[i]) * jump[i];
+                addr_res += dim[i] * res.jump[i];
+            }
+            for (int i = 0; i < DIM_MAX - 2; i++) {
+                addr_oth += (dim[i] % oth_T.shape[i]) * oth_T.jump[i];
+            }
+            for (int i = 0; i < v; i++) {
+                __m256 sum256 = _mm256_setzero_ps();
+                int j = 0;
+                for (; j + 7 < u; j += 8) {
+                    __m256 a_vec = _mm256_loadu_ps(data.data() + addr_self + j);
+                    __m256 b_vec = _mm256_loadu_ps(oth_T.data.data() + addr_oth + j);
+                    sum256 = _mm256_fmadd_ps(a_vec, b_vec, sum256);
+                }
+                float sum = 0.0f;
+                alignas(32) float buf[8];
+                _mm256_store_ps(buf, sum256);
+                for (int t = 0; t < 8; ++t) sum += buf[t];
+                for (; j < u; ++j) sum += data[addr_self + j] * oth_T.data[addr_oth + j];
+                res.data[addr_res + i] = sum;
+
+                addr_oth += oth_T.jump[DIM_MAX - 2];
             }
         }, 0);
         
