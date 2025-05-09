@@ -9,14 +9,12 @@
 using namespace std;
 int main()
 {
-    // ios::sync_with_stdio(false);
-    // cout.tie(0);
-    // mnist_test();
-    ModelParse parser("../model.safetensors");
-    MultiHeadAttention<float> head(parser.getTensor("h.0.attn.c_attn.weight"), parser.getTensor("h.0.attn.c_attn.bias"), 12, 768);
-    Tensor<float> input;
-    input.asShape({3, 768});
-    input = head.forward(input);
+    mnist_mha_test();
+    // ModelParse parser("../model.safetensors");
+    // MultiHeadAttention<float> head(parser, "h.0.attn.c_attn", 12, 768);
+    // Tensor<float> input;
+    // input.asShape({3, 768});
+    // input = head.forward(input);
     // cout << input;
 
 }
