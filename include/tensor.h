@@ -3,14 +3,12 @@
 #include "thread_pool.h"
 #include "time_calc.h"
 #include <cassert>
-#include <cstdio>
 #include <functional>
 #include <future>
 #include <iomanip>
 #include <ios>
 #include <iostream>
 #include <ostream>
-#include <thread>
 #include <utility>
 #include <vector>
 #ifdef USE_SIMD
@@ -121,6 +119,23 @@ public:
         }
     }
 
+    static Tensor<T> concat(const std::vector<Tensor<T>>& tensors) {
+        std::vector<int> shape = tensors[0].shape;
+        int ori_dim = shape.back();
+        int num = tensors.size();
+        shape.back() *= num;
+
+        Tensor<T> res;
+        res.asShape(shape);
+        forEachDim(shape, [&] (std::vector<int> dim) {
+            auto& val = res.at(dim);
+            int idx = dim.back() / ori_dim;
+            dim.back() %= ori_dim;
+            val = tensors[idx].at(dim);
+        });
+        return res;
+    }
+
     Tensor<T> matMul(const Tensor<T>& oth) const {
         TimeCalcGuard g("matMul");
         assert(shape[DIM_MAX - 1] == oth.shape[DIM_MAX - 2]);
@@ -217,6 +232,33 @@ public:
         return res;
     }
 
+    Tensor<T> elementWiseMul(const Tensor<T>& oth) const {
+        TimeCalcGuard g("elementWiseMul");
+        assert(checkBroadCastValid(oth, DIM_MAX));
+        assert(shape.back() == oth.shape.back());
+        std::vector<int> new_shape;
+        for (int dim = 0; dim < DIM_MAX; dim++) {
+            new_shape.push_back(std::max(shape[dim], oth.shape[dim]));
+        }
+        Tensor<T> res;
+        res.asShape(new_shape);
+        int last_dim = new_shape.back();
+        new_shape.pop_back();
+        forEachDim(new_shape, [&](std::vector<int> dim) {
+            std::vector<int> dim_self, dim_oth;
+            int addr_self = 0, addr_oth = 0, addr_res = 0;
+            for (int i = 0; i < DIM_MAX - 1; i++) {
+                addr_self += (dim[i] % shape[i]) * jump[i];
+                addr_oth += (dim[i] % oth.shape[i]) * oth.jump[i];
+                addr_res += dim[i] * res.jump[i];
+            }
+            for (int i = 0; i < last_dim; i++) {
+                res.data[addr_res++] = data[addr_self++] * oth.data[addr_oth++];
+            }
+        }, -1);
+        return res;
+    }
+
     Tensor<T> operator+(const Tensor<T>& oth) {
         TimeCalcGuard g("operator +");
         assert(checkBroadCastValid(oth, DIM_MAX));
@@ -244,7 +286,31 @@ public:
         return res;
     }
 
-    Tensor<T> transpose() {
+    void operator/=(float v) {
+        forEachDim(shape, [&](std::vector<int> dim) {
+            at(dim) /= v;
+        });
+    }
+
+    Tensor<T> slice(const std::vector<std::pair<int, int>>& args) const {
+        int off = DIM_MAX - args.size();
+        std::vector<int> slice_shape(shape.begin(), shape.begin() + off);
+        for (auto [beg, end] : args) {
+            slice_shape.push_back(end - beg);
+        }
+        Tensor<T> res;
+        res.asShape(slice_shape);
+        forEachDim(slice_shape, [&](std::vector<int> dim) {
+            std::vector<int> ori_dim(dim);
+            for (int i = off; i < ori_dim.size(); i++) {
+                ori_dim[i] += args[i - off].first;
+            }
+            res.at(dim) = at(ori_dim);
+        });
+        return res;
+    }
+
+    Tensor<T> transpose() const {
         TimeCalcGuard g("transpose");
         for (int i = 0; i < DIM_MAX - 2; i++) {
             assert(shape[i] == 1);
@@ -267,7 +333,7 @@ public:
             if (dim.back() == 0) {
                 out << '[';
             }
-            else if (dim.back() == ten.shape.back() - 1) {
+            if (dim.back() == ten.shape.back() - 1) {
                 out << ten.at(dim) << ']' << std::endl;
                 return;
             }
