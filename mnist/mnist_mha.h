@@ -7,7 +7,7 @@
 #include <string>
 class MnistMha {
 public:
-    MnistMha(const std::string& path) : parser(path), mha(8, 512) {
+    MnistMha(const std::string& path) : parser(path), mha(8, 512, false) {
         embedding.init(parser, "embedding");
         classifier0.init(parser, "classifier.0");
         classifier2.init(parser, "classifier.2");

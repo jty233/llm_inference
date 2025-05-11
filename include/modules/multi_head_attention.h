@@ -1,15 +1,13 @@
 #pragma once
-#include "model_parse.h"
 #include "modules/linear.h"
 #include "single_head_attention.h"
 #include "tensor.h"
 #include <cassert>
-#include <string>
 #include <vector>
 
 template<typename T>
 struct MultiHeadAttention{
-    MultiHeadAttention(int num_head, int hidden_dim) : num_head(num_head), heads(num_head), x(num_head), hidden_dim(hidden_dim) {
+    MultiHeadAttention(int num_head, int hidden_dim, bool mask) : num_head(num_head), heads(num_head, mask), x(num_head), hidden_dim(hidden_dim) {
         head_dim = hidden_dim / num_head;
     }
 

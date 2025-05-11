@@ -24,15 +24,17 @@ class MNISTWithMHA(nn.Module):
         batch_size = x.size(0)
         x = x.view(batch_size, -1)  # [batch, 784]
         x = self.embedding(x)       # [batch, embed_dim]
+        x = x.unsqueeze(1)
         # 平铺到序列形式 [batch, seq_len, embed_dim]
-        attn_output, _ = self.mha(x, x, x)  # [batch, 784, embed_dim]
+        attn_output, _ = self.mha(x, x, x)  # [batch, 1, embed_dim]
+        attn_output = attn_output.squeeze(1)
         out = self.classifier(attn_output)     # [batch, num_classes]
         return out
 
 # 超参数
 batch_size = 512
 epochs = 40
-learning_rate = 1e-4
+learning_rate = 1e-3
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)

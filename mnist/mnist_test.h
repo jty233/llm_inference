@@ -33,7 +33,7 @@ inline void mnist_mha_test() {
     MnistMha mnist("../mnist_mha.safetensors");
     Tensor<float> t;
     int batch_size = 10;
-    t.asShape({batch_size,28 * 28});
+    t.asShape({batch_size,1, 28 * 28});
     cv::Mat img[10];
     for (int num = 0; num < 10; num++) {
         img[num] = cv::imread("../mnist/nums/" + std::to_string(num % 10) + ".png", cv::IMREAD_GRAYSCALE);
@@ -42,7 +42,7 @@ inline void mnist_mha_test() {
     for (int num = 0; num < batch_size; num++) {
         for (int i = 0; i < 28; i++) {
             for (int j = 0; j < 28; j++) {
-                t.at(num, i * 28 + j) = img[num % 10].at<uchar>(i, j) / 255.;
+                t.at(num, 0, i * 28 + j) = img[num % 10].at<uchar>(i, j) / 255.;
             }
         }
     }
