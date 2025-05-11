@@ -45,13 +45,13 @@ Tensor<T> softmax(const Tensor<T>& input) {
         double exp_sum = 0;
         for (int i = 0; i < res.shape.back(); i++) {
             dim.back() = i;
-            exp_sum += exp(res.at(dim));
+            exp_sum += exp(res.at(dim) - max_val);
         }
 
         for (int i = 0; i < res.shape.back(); i++) {
             dim.back() = i;
-            res.at(dim) = exp(res.at(dim)) / exp_sum;
+            res.at(dim) = exp(res.at(dim) - max_val) / exp_sum;
         }
-    }, 0);
+    });
     return res;
 }

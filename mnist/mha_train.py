@@ -13,6 +13,7 @@ class MNISTWithMHA(nn.Module):
         # 将28x28图像展平到序列长度784，嵌入到embed_dim维
         self.embedding = nn.Linear(28*28, embed_dim)
         self.mha = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads, batch_first=True)
+        self.ln1 = nn.LayerNorm(embed_dim)
         self.classifier = nn.Sequential(
             nn.Linear(embed_dim, 128),
             nn.ReLU(),
@@ -27,6 +28,7 @@ class MNISTWithMHA(nn.Module):
         x = x.unsqueeze(1)
         # 平铺到序列形式 [batch, seq_len, embed_dim]
         attn_output, _ = self.mha(x, x, x)  # [batch, 1, embed_dim]
+        attn_output = self.ln1(attn_output)
         attn_output = attn_output.squeeze(1)
         out = self.classifier(attn_output)     # [batch, num_classes]
         return out

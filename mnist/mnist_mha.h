@@ -3,6 +3,7 @@
 #include "module.h"
 #include "modules/linear.h"
 #include "modules/multi_head_attention.h"
+#include "modules/layer_norm.h"
 #include "tensor.h"
 #include <string>
 class MnistMha {
@@ -14,10 +15,12 @@ public:
         mha.in_proj.w = parser.getTensor("mha.in_proj_weight");
         mha.in_proj.b = parser.getTensor("mha.in_proj_bias");
         mha.out_proj.init(parser, "mha.out_proj");
+        ln.init(parser, "ln1");
     }
     Tensor<float> forward(const Tensor<float>& input) {
         auto x = embedding.forward(input);
         x = mha.forward(x);
+        x = ln.forward(x);
         x = classifier0.forward(x);
         x = relu(x);
         x = classifier2.forward(x);
@@ -27,4 +30,5 @@ private:
     Linear<float> embedding, classifier0, classifier2;
     MultiHeadAttention<float> mha;
     ModelParse parser;
+    LayerNorm<float> ln;
 };
