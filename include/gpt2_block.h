@@ -5,6 +5,7 @@
 #include "modules/linear.h"
 #include "modules/multi_head_attention.h"
 #include "tensor.h"
+#include "time_calc.h"
 #include <string>
 struct GPT2Block {
     GPT2Block(ModelParse& parser, const std::string& name, int num_head, int hidden_dim) : mha(num_head, hidden_dim, true) {
@@ -18,12 +19,13 @@ struct GPT2Block {
     }
 
     Tensor<float> forward(const Tensor<float>& input) {
+        TimeCalcGuard g("gpt2 block");
         Tensor<float> x = ln1.forward(input);
         x = mha.forward(x);
         x = x + input;
         Tensor<float> out = ln2.forward(x);
         out = fc.forward(out);
-        out = relu(out);
+        out = gelu(out);
         out = proj.forward(out);
         return out + x;
     }

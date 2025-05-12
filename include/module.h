@@ -13,6 +13,7 @@ Tensor<T> gelu(const Tensor<T>& input) {
         float inner = sqrt_2_over_pi * (x + 0.044715f * x_cubed);
         x = 0.5f * x * (1.0f + std::tanh(inner));
     }
+    return res;
 }
 
 
@@ -35,11 +36,11 @@ Tensor<T> softmax(const Tensor<T>& input) {
     auto shape = res.shape;
     shape.pop_back();
     Tensor<T>::forEachDim(shape, [&] (std::vector<int> dim) {
-        T max_val = -1e9;
+        double max_val = -1e9;
         dim.push_back(0);
         for (int i = 0; i < res.shape.back(); i++) {
             dim.back() = i;
-            max_val = std::max(max_val, res.at(dim));
+            max_val = std::max(max_val, (double)res.at(dim));
         }
 
         double exp_sum = 0;

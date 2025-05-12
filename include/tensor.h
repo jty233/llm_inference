@@ -148,7 +148,6 @@ public:
     }
 
     Tensor<T> matMul(const Tensor<T>& oth) const {
-        TimeCalcGuard g("matMul");
         assert(shape[DIM_MAX - 1] == oth.shape[DIM_MAX - 2]);
         assert(checkBroadCastValid(oth, DIM_MAX - 2));
 
@@ -198,7 +197,6 @@ public:
     }
 
     Tensor<T> matMulTranspos(const Tensor<T>& oth_T) const {
-        TimeCalcGuard g("matMulTranspos");
         assert(shape[DIM_MAX - 1] == oth_T.shape[DIM_MAX - 1]);
         assert(checkBroadCastValid(oth_T, DIM_MAX - 2));
 
@@ -244,7 +242,6 @@ public:
     }
 
     Tensor<T> elementWiseMul(const Tensor<T>& oth) const {
-        TimeCalcGuard g("elementWiseMul");
         assert(checkBroadCastValid(oth, DIM_MAX));
         assert(shape.back() == oth.shape.back());
         std::vector<int> new_shape;
@@ -297,7 +294,6 @@ public:
     }
 
     Tensor<T> operator+(const Tensor<T>& oth) {
-        TimeCalcGuard g("operator +");
         assert(checkBroadCastValid(oth, DIM_MAX));
         std::vector<int> new_shape;
         for (int dim = 0; dim < DIM_MAX; dim++) {
@@ -323,7 +319,6 @@ public:
     }
 
     Tensor<T> operator-(const Tensor<T>& oth) const {
-        TimeCalcGuard g("operator -");
         assert(checkBroadCastValid(oth, DIM_MAX));
         std::vector<int> new_shape;
         for (int dim = 0; dim < DIM_MAX; dim++) {
@@ -349,7 +344,6 @@ public:
     }
 
     Tensor<T> operator/ (const Tensor<T>& oth) const {
-        TimeCalcGuard g("operator /");
         assert(checkBroadCastValid(oth, DIM_MAX));
         std::vector<int> new_shape;
         for (int dim = 0; dim < DIM_MAX; dim++) {
@@ -381,7 +375,6 @@ public:
     }
 
     Tensor<T> slice(const std::vector<std::pair<int, int>>& args) const {
-        TimeCalcGuard g("slice");
         int off = DIM_MAX - args.size();
         std::vector<int> slice_shape(shape.begin(), shape.begin() + off);
         for (auto [beg, end] : args) {
