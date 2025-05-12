@@ -2,6 +2,7 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
+#include <string>
 #include <vector>
 #include "gpt2.h"
 #include "gpt2_tokenizer.h"
@@ -26,7 +27,9 @@ int main()
 
     GPT2 gpt2("../model.safetensors");
     GPT2Tokenizer tokenizer("../vocab.json");
-    vector<int> tokens({31373});
+    string input;
+    getline(cin,input);
+    vector<int> tokens = tokenizer.encode(input);
     for (auto id : tokens) {
         cout << tokenizer.id2Str[id];
     }
