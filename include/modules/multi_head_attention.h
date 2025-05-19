@@ -20,7 +20,7 @@ struct MultiHeadAttention{
             int off_end = off_beg + head_dim;
             x[i] = heads[i].forward(qkv.slice({{off_beg, off_end}}), qkv.slice({{hidden_dim + off_beg, hidden_dim + off_end}}), qkv.slice({{hidden_dim * 2 + off_beg, hidden_dim * 2 + off_end}}));
         }
-        return out_proj.forward(Tensor<T>::concat(x));
+        return out_proj.forward(Tensor<T>::concat_vec(x));
     }
 
     std::vector<SingleHeadAttention<T>> heads;

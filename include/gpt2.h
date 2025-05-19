@@ -25,9 +25,10 @@ public:
         x.asShape({(int)id.size(), hidden_dim});
         for (int i = 0; i < id.size(); i++) {
             for (int j = 0; j < hidden_dim; j++) {
-                x.at(i, j) = wte.at(id[i], j) + wpe.at(i, j);
+                x.at(i, j) = wte.at(id[i], j) + wpe.at(i + f_token_size, j);
             }
         }
+        f_token_size += id.size();
 
         for (auto& block : blocks) {
             x = block.forward(x);
@@ -51,5 +52,7 @@ private:
     int num_blocks = 12;
     int num_head = 12;
     int hidden_dim = 768;
+
+    int f_token_size = 0;
 
 };

@@ -2,6 +2,7 @@
 
 #include "thread_pool.h"
 #include "time_calc.h"
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <functional>
@@ -33,17 +34,10 @@ public:
     Tensor(const Tensor& oth) : data(oth.data), shape(oth.shape), jump(oth.jump) {
     }
 
-    Tensor<T>& operator=(Tensor<T>&& oth) {
+    Tensor<T>& operator=(Tensor<T> oth) {
         data = std::move(oth.data);
         shape = std::move(oth.shape);
         jump = std::move(oth.jump);
-        return *this;
-    }
-
-    Tensor<T>& operator=(const Tensor<T>& oth) {
-        data = oth.data;
-        shape = oth.shape;
-        jump = oth.jump;
         return *this;
     }
 
@@ -130,7 +124,7 @@ public:
         }
     }
 
-    static Tensor<T> concat(const std::vector<Tensor<T>>& tensors) {
+    static Tensor<T> concat_vec(const std::vector<Tensor<T>>& tensors) {
         std::vector<int> shape = tensors[0].shape;
         int ori_dim = shape.back();
         int num = tensors.size();
@@ -390,6 +384,42 @@ public:
             res.at(dim) = at(ori_dim);
         }, 1);
         return res;
+    }
+
+    Tensor<T> concat(const Tensor<T>& oth, int app_dim) {
+        if (data.empty()) {
+            return oth;
+        }
+        if (oth.data.empty()) {
+            return *this;
+        }
+        app_dim = DIM_MAX - 1 - app_dim;
+        std::vector<int> for_dims;
+        for (int i = 0; i < DIM_MAX; i++) {
+            assert(i == app_dim || shape[i] == oth.shape[i]);
+            if (i < app_dim) {
+                for_dims.push_back(shape[i]);
+            }
+        }
+        std::vector<int> new_shape = shape;
+        new_shape[app_dim] += oth.shape[app_dim];
+        Tensor<T> res;
+        res.asShape(new_shape);
+
+        forEachDim(for_dims, [&] (std::vector<int> dim) {
+            int idxs = 0, self_idxs = 0, oth_idxs = 0;
+            for (int i = 0; i < dim.size(); i++) {
+                idxs += dim[i] * res.jump[i];
+                self_idxs += dim[i] * jump[i];
+                oth_idxs += dim[i] * oth.jump[i];
+            }
+
+            int self_size = jump[app_dim - 1], oth_size = oth.jump[app_dim - 1];
+            std::copy(data.begin() + self_idxs, data.begin() + self_idxs + self_size, res.data.begin() + idxs);
+            std::copy(oth.data.begin() + oth_idxs, oth.data.begin() + oth_idxs + oth_size, res.data.begin() + idxs + self_size);
+        });
+        return res;
+        
     }
 
     Tensor<T> transpose() const {

@@ -9,7 +9,9 @@ struct SingleHeadAttention{
     SingleHeadAttention(bool mask) : mask(mask) {}
 
     Tensor<T> forward(const Tensor<T>& q,const Tensor<T>& k,const Tensor<T>& v) {
-        auto x = q.matMulTranspos(k);
+        k_cache = k_cache.concat(k, 1);
+        v_cache = v_cache.concat(v, 1);
+        auto x = q.matMulTranspos(k_cache);
         x /= std::sqrt(q.shape.back());
         if (mask) {
             Tensor<T>::forEachDim(x.shape, [&](std::vector<int> dim) {
@@ -17,11 +19,14 @@ struct SingleHeadAttention{
                     x.at(dim) = -1e9;
                 }
             }, 1);
+            mask = false;
         }
         x = softmax(x);
-        x = x.matMul(v);
+        x = x.matMul(v_cache);
         return x;
     }
+
+    Tensor<T> k_cache, v_cache;
 
     bool mask;
 };

@@ -8,6 +8,7 @@
 #include "gpt2_tokenizer.h"
 #include "module.h"
 #include "tensor.h"
+#include "time_calc.h"
 #include <random>
 using namespace std;
 const int top_k = 40;
@@ -17,6 +18,17 @@ std::random_device rd;
 std::mt19937 gen(rd());
 int main()
 {
+    // Tensor<float> a({
+    //     1, 2, 3,
+    //     4, 5, 6
+    // }, {2, 3});
+    // Tensor<float> b({
+    //     7, 8, 9,
+    //     10, 11, 12,
+    //     13, 14, 15, 16
+    // }, {2, 5});
+    // auto res = a.concat(b, 0);
+    // cout << res << endl;
     // mnist_mha_test();
     // ModelParse parser("../model.safetensors");
     // MultiHeadAttention<float> head(parser, "h.0.attn.c_attn", 12, 768);
@@ -30,9 +42,12 @@ int main()
     string input;
     getline(cin,input);
     vector<int> tokens = tokenizer.encode(input);
+    cout << "token nums:" << tokens.size() << endl;
     for (auto id : tokens) {
         cout << tokenizer.id2Str[id];
     }
+    int token_sum = 0;
+    startTimeCalc("main");
     while (true) {
         auto res = gpt2.forward(tokens);
         vector<pair<double,int>> logits_probs;
@@ -58,8 +73,10 @@ int main()
             break;
         }
         cout << tokenizer.decode(maxi);
-        tokens.push_back(maxi);
+        // tokens.push_back(maxi);
+        tokens = {maxi};
+        token_sum++;
     }
-
+    cout << "tokens per sec:" << token_sum / getTimeCalcSec();
 
 }

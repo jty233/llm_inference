@@ -25,14 +25,14 @@ inline void mnist_test() {
     
     startTimeCalc("mnist forward");
     auto res = mnist.forward(t);
-    finishTimeCalc();
+    coutTimeCalc();
     std::cout << res;
 }
 
 inline void mnist_mha_test() {
     MnistMha mnist("../mnist_mha.safetensors");
     Tensor<float> t;
-    int batch_size = 10;
+    int batch_size = 10000;
     t.asShape({batch_size,1, 28 * 28});
     cv::Mat img[10];
     for (int num = 0; num < 10; num++) {
@@ -49,6 +49,6 @@ inline void mnist_mha_test() {
     
     startTimeCalc("mnist_mha forward");
     auto res = mnist.forward(t);
-    finishTimeCalc();
-    std::cout << res;
+    coutTimeCalc();
+    // std::cout << res;
 }
