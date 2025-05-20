@@ -6,7 +6,7 @@
 #include "time_calc.h"
 
 inline void mnist_test() {
-    Mnist mnist("../mnist.safetensors");
+    Mnist mnist("../model/mnist/mnist.safetensors");
     Tensor<float> t;
     int batch_size = 10;
     t.asShape({batch_size,28 * 28});
@@ -30,9 +30,9 @@ inline void mnist_test() {
 }
 
 inline void mnist_mha_test() {
-    MnistMha mnist("../mnist_mha.safetensors");
+    MnistMha mnist("../model/mnist/mnist_mha.safetensors");
     Tensor<float> t;
-    int batch_size = 10000;
+    int batch_size = 10;
     t.asShape({batch_size,1, 28 * 28});
     cv::Mat img[10];
     for (int num = 0; num < 10; num++) {
@@ -50,5 +50,5 @@ inline void mnist_mha_test() {
     startTimeCalc("mnist_mha forward");
     auto res = mnist.forward(t);
     coutTimeCalc();
-    // std::cout << res;
+    std::cout << res;
 }

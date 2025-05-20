@@ -9,6 +9,7 @@
 #include "module.h"
 #include "tensor.h"
 #include "time_calc.h"
+#include "mnist_test.h"
 #include <random>
 using namespace std;
 const int top_k = 40;
@@ -18,6 +19,8 @@ std::random_device rd;
 std::mt19937 gen(rd());
 int main()
 {
+    mnist_test();
+    mnist_mha_test();
     // Tensor<float> a({
     //     1, 2, 3,
     //     4, 5, 6
@@ -37,8 +40,8 @@ int main()
     // input = head.forward(input);
     // cout << input;
 
-    GPT2 gpt2("../model.safetensors");
-    GPT2Tokenizer tokenizer("../vocab.json");
+    GPT2 gpt2("../model/gpt2/model.safetensors");
+    GPT2Tokenizer tokenizer("../model/gpt2/vocab.json");
     string input;
     getline(cin,input);
     vector<int> tokens = tokenizer.encode(input);

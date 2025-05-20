@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(OpenCV REQUIRED)
 
-include_directories(include 3rdparty mnist ${OpenCV_INCLUDE_DIRS})
+include_directories(include 3rdparty mnist gpt2 ${OpenCV_INCLUDE_DIRS})
 add_compile_definitions(USE_SIMD)
 add_compile_options(-mavx2 -mfma -ffast-math)
 
