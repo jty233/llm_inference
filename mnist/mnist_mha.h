@@ -2,7 +2,7 @@
 #include "model_parse.h"
 #include "module.h"
 #include "modules/linear.h"
-#include "modules/multi_head_attention.h"
+#include "gpt2/multi_head_attention.h"
 #include "modules/layer_norm.h"
 #include "tensor.h"
 #include <string>

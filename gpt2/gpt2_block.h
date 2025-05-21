@@ -3,7 +3,7 @@
 #include "module.h"
 #include "modules/layer_norm.h"
 #include "modules/linear.h"
-#include "modules/multi_head_attention.h"
+#include "multi_head_attention.h"
 #include "tensor.h"
 #include "time_calc.h"
 #include <string>

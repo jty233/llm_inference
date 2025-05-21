@@ -4,12 +4,12 @@
 #include <opencv2/imgproc.hpp>
 #include <string>
 #include <vector>
-#include "gpt2.h"
-#include "gpt2_tokenizer.h"
+#include "gpt2/gpt2.h"
+#include "gpt2/gpt2_tokenizer.h"
 #include "module.h"
 #include "tensor.h"
 #include "time_calc.h"
-#include "mnist_test.h"
+#include "mnist/mnist_test.h"
 #include <random>
 using namespace std;
 const int top_k = 40;
@@ -19,26 +19,8 @@ std::random_device rd;
 std::mt19937 gen(rd());
 int main()
 {
-    mnist_test();
-    mnist_mha_test();
-    // Tensor<float> a({
-    //     1, 2, 3,
-    //     4, 5, 6
-    // }, {2, 3});
-    // Tensor<float> b({
-    //     7, 8, 9,
-    //     10, 11, 12,
-    //     13, 14, 15, 16
-    // }, {2, 5});
-    // auto res = a.concat(b, 0);
-    // cout << res << endl;
-    // mnist_mha_test();
-    // ModelParse parser("../model.safetensors");
-    // MultiHeadAttention<float> head(parser, "h.0.attn.c_attn", 12, 768);
-    // Tensor<float> input;
-    // input.asShape({3, 768});
-    // input = head.forward(input);
-    // cout << input;
+    ModelParse parser("../model/qwen3/model.safetensors");
+    return 0;
 
     GPT2 gpt2("../model/gpt2/model.safetensors");
     GPT2Tokenizer tokenizer("../model/gpt2/vocab.json");
