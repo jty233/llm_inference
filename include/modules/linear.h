@@ -5,9 +5,11 @@
 
 template<typename T>
 struct Linear{
-    void init(ModelParse& parser, const std::string& name, bool normal_order = false) {
+    void init(ModelParse& parser, const std::string& name, bool normal_order = false, bool weight_only = false) {
         w = parser.getTensor(name + ".weight");
-        b = parser.getTensor(name + ".bias");
+        if (!weight_only) {
+            b = parser.getTensor(name + ".bias");
+        }
         this->normal_order = normal_order;
     }
     Tensor<T> forward(const Tensor<T>& input) {

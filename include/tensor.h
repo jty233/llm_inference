@@ -288,6 +288,12 @@ public:
     }
 
     Tensor<T> operator+(const Tensor<T>& oth) {
+        if (oth.data.empty()) {
+            return *this;
+        }
+        if (data.empty()) {
+            return oth;
+        }
         assert(checkBroadCastValid(oth, DIM_MAX));
         std::vector<int> new_shape;
         for (int dim = 0; dim < DIM_MAX; dim++) {

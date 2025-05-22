@@ -19,10 +19,9 @@ struct GroupedHeadAttention{
     }
 
     Tensor<T> forward(const Tensor<T>& input) {
-        auto input_norm = input_layernorm.forward(input);
-        auto q = q_proj.forward(input_norm);
-        auto k = k_proj.forward(input_norm);
-        auto v = v_proj.forward(input_norm);
+        auto q = q_proj.forward(input);
+        auto k = k_proj.forward(input);
+        auto v = v_proj.forward(input);
         int d_model = q.shape.back();
         assert(d_model % num_attention_head == 0);
         int head_dim = d_model / num_attention_head;
@@ -43,7 +42,7 @@ struct GroupedHeadAttention{
     std::vector<Tensor<T>> k_cache, v_cache;
     std::vector<Tensor<T>> x;
     Linear<T> q_proj, k_proj, v_proj, out_proj;
-    RMSNorm<T> input_layernorm, k_norm, q_norm;
+    RMSNorm<T> k_norm, q_norm;
     int num_attention_head;
     int num_kv_head;
     int hidden_dim;

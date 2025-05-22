@@ -28,6 +28,15 @@ Tensor<T> relu(const Tensor<T>& input) {
     return res;
 }
 
+template<typename T>
+Tensor<T> silu(const Tensor<T>& input) {
+    Tensor<T> res = input;
+    for (auto& x : res.data) {
+        x /= 1 + std::exp(-x);
+    }
+    return res;
+}
+
 
 
 template<typename T>
