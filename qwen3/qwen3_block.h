@@ -10,8 +10,13 @@ struct Qwen3Block {
     }
 
     Tensor<T> forward(const Tensor<T>& input) {
-        Tensor<T> x = attention.forward(post_attention_layernorm.forward(input)) + input;
-        return mlp.forward(input_layernorm.forward(x)) + x;
+        Tensor<T> x = input_layernorm.forward(input);
+        x = attention.forward(x);
+        x = x + input;
+        Tensor<T> out = post_attention_layernorm.forward(x);
+        out = mlp.forward(out);
+        out = out + x;
+        return out;
     }
 
     RMSNorm<T> input_layernorm, post_attention_layernorm;

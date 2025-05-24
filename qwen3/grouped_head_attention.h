@@ -3,7 +3,7 @@
 #include "single_head_attention.h"
 #include "tensor.h"
 #include <cassert>
-#include <cmath>
+#include "module.h"
 #include <vector>
 #include "modules/RMS_norm.h"
 
@@ -14,11 +14,11 @@ struct GroupedHeadAttention{
         assert(num_attention_head % num_kv_head == 0);
         per_group_num = num_attention_head / num_kv_head;
         for (int i = 0; i < num_attention_head; i++) {
-            heads[i].k_cache = &k_cache[i / per_group_num];
-            heads[i].v_cache = &v_cache[i / per_group_num];
+            heads[i].k_cache = k_cache.data() + (i / per_group_num);
+            heads[i].v_cache = v_cache.data() + (i / per_group_num);
         }
     }
-
+    
     Tensor<T> forward(const Tensor<T>& input) {
         auto q = q_proj.forward(input);
         auto k = k_proj.forward(input);
@@ -27,36 +27,21 @@ struct GroupedHeadAttention{
         assert(d_model % num_attention_head == 0);
         int head_dim = d_model / num_attention_head;
         for (int i = 0; i < num_kv_head; i++) {
-            std::vector<int> dim_range({i * head_dim, (i + 1) * head_dim});
-            k_cache[i] = k_cache[i].concat(apply_RoPE(k_norm.forward(k.slice({dim_range}))), 1);
+            std::pair<int, int> dim_range({i * head_dim, (i + 1) * head_dim});
+            Tensor<T> norm = k_norm.forward(k.slice({dim_range}));
+            k_cache[i] = k_cache[i].concat(apply_RoPE(norm, rope_base, f_token_num), 1);
             v_cache[i] = v_cache[i].concat(v.slice({dim_range}), 1);
         }
 
         for (int i = 0; i < num_attention_head; i++) {
-            std::vector<int> dim_range({i * head_dim, (i + 1) * head_dim});
-            x[i] = heads[i].forward(apply_RoPE(q_norm.forward(q.slice({dim_range}))));
+            std::pair<int, int> dim_range({i * head_dim, (i + 1) * head_dim});
+            Tensor<T> norm = q_norm.forward(q.slice({dim_range}));
+            x[i] = heads[i].forward(apply_RoPE(norm, rope_base, f_token_num));
         }
         f_token_num += input.shape[Tensor<T>::DIM_MAX - 2];
-        return out_proj.forward(Tensor<T>::concat_vec(x));
-    }
-
-    Tensor<T> apply_RoPE(const Tensor<T>& input) {
-        Tensor<T> res;
-        auto shape = res.shape;
-        res.asShape(shape);
-        int d = shape.back();
-        shape.pop_back();
-        Tensor<T>::forEachDim(shape, [&] (std::vector<int> dim) {
-            int m = dim.back() + f_token_num;
-            dim.push_back(0);
-            int off = Tensor<T>::idxs2Offset(dim);
-            for (int i = 0; i < d; i += 2) {
-                double theta = std::pow(rope_base, -2. * (i / 2) / d); // NOLINT
-                res.data[off + i] = input.data[off + i] * cos(m * theta) - input.data[off + i + 1] * sin(m * theta);
-                res.data[off + i + 1] = input.data[off + i + 1] * cos(m * theta) + input.data[off + i] * sin(m * theta);
-            }
-        });
-        return res;
+        Tensor<T> out = Tensor<T>::concat_vec(x);
+        out = out_proj.forward(out);
+        return out;
     }
 
     std::vector<SingleHeadAttention<T>> heads;
@@ -68,6 +53,6 @@ struct GroupedHeadAttention{
     int num_kv_head;
     int hidden_dim;
     int per_group_num;
-    int f_token_num;
+    int f_token_num = 0;
     double rope_base = 1e6;
 };

@@ -65,3 +65,23 @@ Tensor<T> softmax(const Tensor<T>& input) {
     });
     return res;
 }
+
+template<typename T>
+Tensor<T> apply_RoPE(const Tensor<T>& input, double rope_base, int f_token_num) {
+    Tensor<T> res;
+    auto shape = input.shape;
+    res.asShape(shape);
+    int d = shape.back();
+    shape.pop_back();
+    Tensor<T>::forEachDim(shape, [&] (std::vector<int> dim) {
+        int m = dim.back() + f_token_num;
+        dim.push_back(0);
+        int off = input.idxs2Offset(dim);
+        for (int i = 0; i < d; i += 2) {
+            double theta = std::pow(rope_base, -2. * (i / 2) / d); // NOLINT
+            res.data[off + i] = input.data[off + i] * cos(m * theta) - input.data[off + i + 1] * sin(m * theta);
+            res.data[off + i + 1] = input.data[off + i + 1] * cos(m * theta) + input.data[off + i] * sin(m * theta);
+        }
+    });
+    return res;
+}

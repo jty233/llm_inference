@@ -6,8 +6,12 @@
 #include "tensor.h"
 #include <string>
 #include <vector>
-struct Qwen3 {
-    Qwen3(ModelParse& parser) : blocks(block_num, Qwen3Block<float>(num_attention_head, num_kv_head, hidden_dim, true)) {
+struct  Qwen3 {
+    Qwen3(const std::string& path) : parser(path) {
+        blocks.reserve(block_num);
+        for (int i = 0; i < block_num; i++) {
+            blocks.emplace_back(num_attention_head, num_kv_head, hidden_dim, true);
+        }
         int i = 0;
         lm_head.init(parser, "lm_head", false, true);
         embed_tokens = parser.getTensor("model.embed_tokens.weight");
@@ -41,7 +45,6 @@ struct Qwen3 {
                 x.at(i, j) = embed_tokens.at(id[i], j);
             }
         }
-        // TODO RoPE
 
         for (auto& block : blocks) {
             x = block.forward(x);
@@ -61,5 +64,6 @@ struct Qwen3 {
     Linear<float> lm_head;
     RMSNorm<float> norm;
     Tensor<float> embed_tokens;
+    ModelParse parser;
 
 };

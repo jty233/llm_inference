@@ -1,40 +1,52 @@
 #include <algorithm>
-#include <opencv2/core/mat.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
 #include <string>
 #include <vector>
-#include "gpt2/gpt2.h"
-#include "gpt2/gpt2_tokenizer.h"
+#include "qwen3/qwen3.h"
+#include "qwen3/qwen3_tokenizer.h"
 #include "module.h"
 #include "tensor.h"
 #include "time_calc.h"
-#include "mnist/mnist_test.h"
 #include <random>
 using namespace std;
-const int top_k = 40;
-const int logits_size = 50257;
-const int eot_token = 50256;
+const int top_k = 10;
+const int logits_size = 151936;
+const int eot_token = 151645;
 std::random_device rd;
 std::mt19937 gen(rd());
 int main()
 {
-    ModelParse parser("../model/qwen3/model.safetensors");
-    return 0;
+    // Tensor<float> t({
+    //     0,1,2,3,
+    //     4,5,6,7,
+    //     8,9,10,11
+    // }, { 2, 6});
+    // t = apply_RoPE(t, 1e6, 0);
+    // cout << t;
+    // t = apply_RoPE(t, 1e6, 2);
+    // cout << t;
+    // return 0;
 
-    GPT2 gpt2("../model/gpt2/model.safetensors");
-    GPT2Tokenizer tokenizer("../model/gpt2/vocab.json");
-    string input;
-    getline(cin,input);
+    // GPT2 gpt2("../model/gpt2/model.safetensors");
+    // GPT2Tokenizer tokenizer("../model/gpt2/vocab.json");
+    Qwen3 qwen3("../model/qwen3/model.safetensors");
+    Qwen3Tokenizer tokenizer("../model/qwen3/vocab.json");
+
+    string input = "this part";
+    // getline(cin,input);
     vector<int> tokens = tokenizer.encode(input);
+    for (auto id : tokens) {
+        cout << id << ',';
+    }
+    cout << endl;
     cout << "token nums:" << tokens.size() << endl;
     for (auto id : tokens) {
         cout << tokenizer.id2Str[id];
     }
+    // vector<int> tokens{  574};
     int token_sum = 0;
     startTimeCalc("main");
     while (true) {
-        auto res = gpt2.forward(tokens);
+        auto res = qwen3.forward(tokens);
         vector<pair<double,int>> logits_probs;
         for (int i = 0; i < res.shape.back(); i++) {
             logits_probs.emplace_back(-res.at(i), i);
@@ -58,8 +70,9 @@ int main()
             break;
         }
         cout << tokenizer.decode(maxi);
+        // cout << maxi << ' ';
         // tokens.push_back(maxi);
-        tokens = {maxi};
+        tokens = {949};
         token_sum++;
     }
     cout << "tokens per sec:" << token_sum / getTimeCalcSec();

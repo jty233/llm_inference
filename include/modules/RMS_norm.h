@@ -5,7 +5,7 @@ template<typename T>
 struct RMSNorm{
     Tensor<T> forward(const Tensor<T>& input) {
         Tensor<T> mean = input.elementWiseMul(input).mean().sqrt(eps);
-        return input / mean * w;
+        return (input / mean).elementWiseMul(w);
     }
 
     Tensor<T> w;
