@@ -77,10 +77,13 @@ Tensor<T> apply_RoPE(const Tensor<T>& input, double rope_base, int f_token_num) 
         int m = dim.back() + f_token_num;
         dim.push_back(0);
         int off = input.idxs2Offset(dim);
-        for (int i = 0; i < d; i += 2) {
-            double theta = std::pow(rope_base, -2. * (i / 2) / d); // NOLINT
-            res.data[off + i] = input.data[off + i] * cos(m * theta) - input.data[off + i + 1] * sin(m * theta);
-            res.data[off + i + 1] = input.data[off + i + 1] * cos(m * theta) + input.data[off + i] * sin(m * theta);
+        for (int i = 0; i < d / 2; i++) {
+            double theta = std::pow(rope_base, -2. * i / d);
+            res.data[off + i] = input.data[off + i] * cos(m * theta) - input.data[off + i + d / 2] * sin(m * theta);
+        }
+        for (int i = d / 2; i < d; i++) {
+            double theta = std::pow(rope_base, -2. * (i - d / 2) / d); // NOLINT
+            res.data[off + i] = input.data[off + i] * cos(m * theta) + input.data[off + i - d / 2] * sin(m * theta);
         }
     });
     return res;

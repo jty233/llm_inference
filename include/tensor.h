@@ -13,9 +13,7 @@
 #include <ostream>
 #include <utility>
 #include <vector>
-#ifdef USE_SIMD
 #include <immintrin.h>
-#endif
 
 template<typename T>
 class Tensor{
@@ -221,7 +219,7 @@ public:
                     __m256 b_vec = _mm256_loadu_ps(oth_T.data.data() + addr_oth + j);
                     sum256 = _mm256_fmadd_ps(a_vec, b_vec, sum256);
                 }
-                float sum = 0.0f;
+                double sum = 0.0f;
                 alignas(32) float buf[8];
                 _mm256_store_ps(buf, sum256);
                 for (int t = 0; t < 8; ++t) sum += buf[t];
@@ -268,7 +266,7 @@ public:
         Tensor<T> mean;
         mean.asShape(new_shape);
         Tensor<T>::forEachDim(new_shape, [&](std::vector<int> dim) {
-            T sum = 0;
+            double sum = 0;
             int off = idxs2Offset(dim);
             for (int i = 0; i < last_dim; i++) {
                 sum += data[off + i];
@@ -368,9 +366,15 @@ public:
         return res;
     }
 
-    void operator/=(float v) {
+    void operator/=(double v) {
         forEachDim(shape, [&](std::vector<int> dim) {
             at(dim) /= v;
+        });
+    }
+
+    void operator*=(double v) {
+        forEachDim(shape, [&](std::vector<int> dim) {
+            at(dim) *= v;
         });
     }
 

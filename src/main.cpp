@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdio>
 #include <string>
 #include <vector>
 #include "qwen3/qwen3.h"
@@ -8,7 +9,7 @@
 #include "time_calc.h"
 #include <random>
 using namespace std;
-const int top_k = 10;
+const int top_k = 40;
 const int logits_size = 151936;
 const int eot_token = 151645;
 std::random_device rd;
@@ -31,18 +32,19 @@ int main()
     Qwen3 qwen3("../model/qwen3/model.safetensors");
     Qwen3Tokenizer tokenizer("../model/qwen3/vocab.json");
 
-    string input = "this part";
-    // getline(cin,input);
-    vector<int> tokens = tokenizer.encode(input);
-    for (auto id : tokens) {
-        cout << id << ',';
-    }
-    cout << endl;
-    cout << "token nums:" << tokens.size() << endl;
-    for (auto id : tokens) {
-        cout << tokenizer.id2Str[id];
-    }
-    // vector<int> tokens{  574};
+    // string input = "#include";
+    // // getline(cin,input);
+    // vector<int> tokens = tokenizer.encode(input);
+    // for (auto id : tokens) {
+    //     cout << id << ',';
+    // }
+    // cout << endl;
+    // cout << "token nums:" << tokens.size() << endl;
+    // for (auto id : tokens) {
+    //     cout << tokenizer.id2Str[id];
+    // }
+    vector<int> tokens{  151644,872,198,3838,646,498,653,30,151645,198,151644,77091,198, 151667, 198};
+    // vector<int> tokens{  151644,872};
     int token_sum = 0;
     startTimeCalc("main");
     while (true) {
@@ -62,7 +64,9 @@ int main()
         for (int j = 0; j < top_k; j++)
         {
             distribution[logits_probs[j].second] = probs.at(j);
+            printf("rand%2d id = %6d token = %6s prob = %g\n", j, logits_probs[j].second, tokenizer.decode(logits_probs[j].second).c_str(), probs.at(j));
         }
+        break;
         std::discrete_distribution dist(distribution.begin(), distribution.end());
         int maxi = dist(gen);
         if (maxi == eot_token) {
@@ -72,7 +76,7 @@ int main()
         cout << tokenizer.decode(maxi);
         // cout << maxi << ' ';
         // tokens.push_back(maxi);
-        tokens = {949};
+        tokens = {maxi};
         token_sum++;
     }
     cout << "tokens per sec:" << token_sum / getTimeCalcSec();
