@@ -1,13 +1,13 @@
 #include <algorithm>
-#include <cstdio>
+#include <iostream>
 #include <string>
 #include <vector>
 #include "qwen3/qwen3.h"
-#include "qwen3/qwen3_tokenizer.h"
 #include "module.h"
 #include "tensor.h"
 #include "time_calc.h"
 #include <random>
+#include "tokenizer.h"
 using namespace std;
 const int top_k = 40;
 const int logits_size = 151936;
@@ -16,39 +16,28 @@ std::random_device rd;
 std::mt19937 gen(rd());
 int main()
 {
-    // Tensor<float> t({
-    //     0,1,2,3,
-    //     4,5,6,7,
-    //     8,9,10,11
-    // }, { 2, 6});
-    // t = apply_RoPE(t, 1e6, 0);
-    // cout << t;
-    // t = apply_RoPE(t, 1e6, 2);
-    // cout << t;
-    // return 0;
-
-    // GPT2 gpt2("../model/gpt2/model.safetensors");
-    // GPT2Tokenizer tokenizer("../model/gpt2/vocab.json");
     Qwen3 qwen3("../model/qwen3/model.safetensors");
-    Qwen3Tokenizer tokenizer("../model/qwen3/vocab.json");
+    Tokenizer tokenizer;
+    tokenizer.init("../model/qwen3/merges.txt", "../model/qwen3/vocab.json");
 
-    // string input = "#include";
+    string input = "你是什么模型";
     // // getline(cin,input);
-    // vector<int> tokens = tokenizer.encode(input);
+    vector<int> token_input = {151644,872,198,151645,198};
+    vector<int> tokens = tokenizer.encode(input);
+    token_input.insert(token_input.end(), tokens.begin(), tokens.end());
+    token_input.insert(token_input.end(), {151644,77091, 198, 151667, 198, 151668});
+    
+
     // for (auto id : tokens) {
     //     cout << id << ',';
     // }
     // cout << endl;
-    // cout << "token nums:" << tokens.size() << endl;
-    // for (auto id : tokens) {
-    //     cout << tokenizer.id2Str[id];
-    // }
-    vector<int> tokens{  151644,872,198,3838,646,498,653,30,151645,198,151644,77091,198, 151667, 198};
-    // vector<int> tokens{  151644,872};
+    cout << "token nums:" << token_input.size() << endl;
+    // cout << tokenizer.decode(token_input);
     int token_sum = 0;
     startTimeCalc("main");
     while (true) {
-        auto res = qwen3.forward(tokens);
+        auto res = qwen3.forward(token_input);
         vector<pair<double,int>> logits_probs;
         for (int i = 0; i < res.shape.back(); i++) {
             logits_probs.emplace_back(-res.at(i), i);
@@ -64,19 +53,25 @@ int main()
         for (int j = 0; j < top_k; j++)
         {
             distribution[logits_probs[j].second] = probs.at(j);
-            printf("rand%2d id = %6d token = %6s prob = %g\n", j, logits_probs[j].second, tokenizer.decode(logits_probs[j].second).c_str(), probs.at(j));
         }
-        break;
         std::discrete_distribution dist(distribution.begin(), distribution.end());
         int maxi = dist(gen);
         if (maxi == eot_token) {
             std::cout << "<|endoftext|>\n";
             break;
         }
-        cout << tokenizer.decode(maxi);
+        else if (maxi == 151667) {
+            std::cout << "<think>";
+        }
+        else if (maxi == 151668) {
+            cout << "</think>";
+        }
+        else {
+            cout << tokenizer.decode(maxi);
+        }
         // cout << maxi << ' ';
-        // tokens.push_back(maxi);
-        tokens = {maxi};
+        // token_input.push_back(maxi);
+        token_input = {maxi};
         token_sum++;
     }
     cout << "tokens per sec:" << token_sum / getTimeCalcSec();
