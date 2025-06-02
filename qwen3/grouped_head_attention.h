@@ -4,6 +4,8 @@
 #include "tensor.h"
 #include <cassert>
 #include "module.h"
+#include <future>
+#include <thread>
 #include <vector>
 #include "modules/RMS_norm.h"
 
@@ -26,18 +28,28 @@ struct GroupedHeadAttention{
         int d_model = q.shape.back();
         assert(d_model % num_attention_head == 0);
         int head_dim = d_model / num_attention_head;
+
+        std::vector<std::jthread> v_threads;
+        
         for (int i = 0; i < num_kv_head; i++) {
-            std::pair<int, int> dim_range({i * head_dim, (i + 1) * head_dim});
-            Tensor<T> norm = k_norm.forward(k.slice({dim_range}));
-            k_cache[i] = k_cache[i].concat(apply_RoPE(norm, rope_base, f_token_num), 1);
-            v_cache[i] = v_cache[i].concat(v.slice({dim_range}), 1);
+            v_threads.emplace_back(std::jthread([&, i] () -> void {
+                std::pair<int, int> dim_range({i * head_dim, (i + 1) * head_dim});
+                Tensor<T> norm = k_norm.forward(k.slice({dim_range}));
+                k_cache[i] = k_cache[i].concat(apply_RoPE(norm, rope_base, f_token_num), 1);
+                v_cache[i] = v_cache[i].concat(v.slice({dim_range}), 1);
+            }));
         }
+        v_threads.clear();
 
         for (int i = 0; i < num_attention_head; i++) {
-            std::pair<int, int> dim_range({i * head_dim, (i + 1) * head_dim});
-            Tensor<T> norm = q_norm.forward(q.slice({dim_range}));
-            x[i] = heads[i].forward(apply_RoPE(norm, rope_base, f_token_num));
+            v_threads.emplace_back(std::jthread([&, i] () -> void {
+                std::pair<int, int> dim_range({i * head_dim, (i + 1) * head_dim});
+                Tensor<T> norm = q_norm.forward(q.slice({dim_range}));
+                x[i] = heads[i].forward(apply_RoPE(norm, rope_base, f_token_num));
+            }));
         }
+        v_threads.clear();
+
         f_token_num += input.shape[Tensor<T>::DIM_MAX - 2];
         Tensor<T> out = Tensor<T>::concat_vec(x);
         out = out_proj.forward(out);

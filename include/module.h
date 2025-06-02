@@ -44,7 +44,7 @@ Tensor<T> softmax(const Tensor<T>& input) {
     Tensor<T> res = input;
     auto shape = res.shape;
     shape.pop_back();
-    Tensor<T>::forEachDim(shape, [&] (std::vector<int> dim) {
+    res.forEachDim(shape, [&] (std::vector<int> dim) {
         double max_val = -1e9;
         dim.push_back(0);
         for (int i = 0; i < res.shape.back(); i++) {
@@ -73,7 +73,7 @@ Tensor<T> apply_RoPE(const Tensor<T>& input, double rope_base, int f_token_num) 
     res.asShape(shape);
     int d = shape.back();
     shape.pop_back();
-    Tensor<T>::forEachDim(shape, [&] (std::vector<int> dim) {
+    res.forEachDim(shape, [&] (std::vector<int> dim) {
         int m = dim.back() + f_token_num;
         dim.push_back(0);
         int off = input.idxs2Offset(dim);

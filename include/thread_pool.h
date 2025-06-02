@@ -31,9 +31,9 @@ public:
     }
 
     template <typename F, typename... Arg>
-    auto assign(F &&f, Arg &&...args) -> std::future<decltype(f(std::forward<Arg>(args)...))>
+    auto assign(F &&f, Arg &&...args)
     {
-        using RetType = decltype(f(std::forward<Arg>(args)...));
+        using RetType = decltype(std::invoke(f, std::forward<Arg>(args)...));
         auto ptr = std::make_shared<std::packaged_task<RetType()>>(std::bind(std::forward<F>(f), std::forward<Arg>(args)...));
         std::future<RetType> fut = ptr->get_future();
         mtx.lock();

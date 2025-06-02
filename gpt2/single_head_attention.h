@@ -18,7 +18,7 @@ struct SingleHeadAttention{
                 if (dim[x.DIM_MAX - 1] > dim[x.DIM_MAX - 2]) {
                     x.at(dim) = -1e9;
                 }
-            }, 1);
+            });
             mask = false;
         }
         x = softmax(x);

@@ -20,7 +20,7 @@ int main()
     Tokenizer tokenizer;
     tokenizer.init("../model/qwen3/merges.txt", "../model/qwen3/vocab.json");
 
-    string input = "你是什么模型";
+    string input = "write a simple python code about 20 lines";
     // // getline(cin,input);
     vector<int> token_input = {151644,872,198,151645,198};
     vector<int> tokens = tokenizer.encode(input);

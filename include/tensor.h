@@ -15,6 +15,8 @@
 #include <vector>
 #include <immintrin.h>
 
+
+
 template<typename T>
 class Tensor{
 public:
@@ -98,7 +100,8 @@ public:
         return idx;
     }
 
-    static void forEachDim(const std::vector<int>& dims, const std::function<void(std::vector<int>)>& fun, int thread_level = -1, std::vector<int> cur_dim = {}) {
+    void _forEachDim(const std::vector<int>& dims, const std::function<void(std::vector<int>)>& fun, int thread_level,
+            std::vector<int>& cur_dim, std::vector<std::future<void>>& future_list) {
         if (cur_dim.size() == dims.size()) {
             fun(cur_dim);
             return;
@@ -107,19 +110,23 @@ public:
         for (int i = 0; i < dims[cur_dim.size() - 1]; i++) {
             cur_dim.back() = i;
             if (cur_dim.size() + thread_level == dims.size()) {
-                future_list.emplace_back(thread_pool.assign(forEachDim, dims, fun, thread_level, cur_dim));
+                future_list.emplace_back(thread_pool.assign(&Tensor<T>::_forEachDim, this,  dims, fun, thread_level, cur_dim, std::ref(future_list)));
             }
             else {
-                forEachDim(dims, fun, thread_level, cur_dim);
+                _forEachDim(dims, fun, thread_level, cur_dim, future_list);
             }
         }
+        cur_dim.pop_back();
+    }
 
-        if (cur_dim.size() == 1) {
-            for (auto& f : future_list) {
-                f.get();
-            }
-            future_list.clear();
+    void forEachDim(const std::vector<int>& dims, const std::function<void(std::vector<int>)>& fun, int thread_level = -1) {
+        std::vector<int> cur_dim;
+        std::vector<std::future<void>> future_list;
+        _forEachDim(dims, fun, thread_level, cur_dim, future_list);
+        for (auto& f : future_list) {
+            f.get();
         }
+        future_list.clear();
     }
 
     static Tensor<T> concat_vec(const std::vector<Tensor<T>>& tensors) {
@@ -130,7 +137,7 @@ public:
 
         Tensor<T> res;
         res.asShape(shape);
-        forEachDim(shape, [&] (std::vector<int> dim) {
+        res.forEachDim(shape, [&] (std::vector<int> dim) {
             auto& val = res.at(dim);
             int idx = dim.back() / ori_dim;
             dim.back() %= ori_dim;
@@ -153,7 +160,7 @@ public:
         Tensor<T> res;
         res.asShape(new_shape);
         new_shape.pop_back();
-        forEachDim(new_shape, [&](std::vector<int> dim) {
+        res.forEachDim(new_shape, [&](std::vector<int> dim) {
             int addr_self = 0, addr_oth = 0, addr_res = 0;
             for (int i = 0; i < DIM_MAX - 1; i++) {
                 addr_self += (dim[i] % shape[i]) * jump[i];
@@ -202,7 +209,7 @@ public:
         Tensor<T> res;
         res.asShape(new_shape);
         new_shape.pop_back();
-        forEachDim(new_shape, [&](std::vector<int> dim) {
+        res.forEachDim(new_shape, [&](std::vector<int> dim) {
             int addr_self = 0, addr_oth = 0, addr_res = 0;
             for (int i = 0; i < DIM_MAX - 1; i++) {
                 addr_self += (dim[i] % shape[i]) * jump[i];
@@ -244,7 +251,7 @@ public:
         res.asShape(new_shape);
         int last_dim = new_shape.back();
         new_shape.pop_back();
-        forEachDim(new_shape, [&](std::vector<int> dim) {
+        res.forEachDim(new_shape, [&](std::vector<int> dim) {
             std::vector<int> dim_self, dim_oth;
             int addr_self = 0, addr_oth = 0, addr_res = 0;
             for (int i = 0; i < DIM_MAX - 1; i++) {
@@ -265,7 +272,7 @@ public:
         new_shape.back() = 1;
         Tensor<T> mean;
         mean.asShape(new_shape);
-        Tensor<T>::forEachDim(new_shape, [&](std::vector<int> dim) {
+        mean.forEachDim(new_shape, [&](std::vector<int> dim) {
             double sum = 0;
             int off = idxs2Offset(dim);
             for (int i = 0; i < last_dim; i++) {
@@ -279,7 +286,7 @@ public:
     Tensor<T> sqrt(double eps = 1e-5) const {
         Tensor<T> res;
         res.asShape(shape);
-        Tensor<T>::forEachDim(shape, [&](std::vector<int> dim) {
+        res.forEachDim(shape, [&](std::vector<int> dim) {
             res.at(dim) = std::sqrt(at(dim) + eps);
         });
         return res;
@@ -351,7 +358,7 @@ public:
         res.asShape(new_shape);
         int last_dim = new_shape.back();
         new_shape.pop_back();
-        forEachDim(new_shape, [&](std::vector<int> dim) {
+        res.forEachDim(new_shape, [&](std::vector<int> dim) {
             std::vector<int> dim_self, dim_oth;
             int addr_self = 0, addr_oth = 0, addr_res = 0;
             for (int i = 0; i < DIM_MAX - 1; i++) {
@@ -386,13 +393,13 @@ public:
         }
         Tensor<T> res;
         res.asShape(slice_shape);
-        forEachDim(slice_shape, [&](std::vector<int> dim) {
+        res.forEachDim(slice_shape, [&](std::vector<int> dim) {
             std::vector<int> ori_dim(dim);
             for (int i = off; i < ori_dim.size(); i++) {
                 ori_dim[i] += args[i - off].first;
             }
             res.at(dim) = at(ori_dim);
-        }, 1);
+        });
         return res;
     }
 
@@ -451,7 +458,7 @@ public:
 
     friend std::ostream& operator<<(std::ostream& out, const Tensor<T>& ten) {
         out << std::fixed << std::setprecision(4);
-        forEachDim(ten.shape, [&] (std::vector<int> dim) {
+        ten.forEachDim(ten.shape, [&] (std::vector<int> dim) {
             if (dim.back() == 0) {
                 out << '[';
             }
@@ -490,5 +497,4 @@ public:
     std::vector<int> shape;
     std::vector<int> jump;
     static inline ThreadPool& thread_pool = ThreadPool::getInstance();
-    static inline std::vector<std::future<void>> future_list;
 };
