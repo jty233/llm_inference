@@ -16,9 +16,22 @@ std::random_device rd;
 std::mt19937 gen(rd());
 int main()
 {
-    Qwen3 qwen3("../model/qwen3/model.safetensors");
-    Tokenizer tokenizer;
-    tokenizer.init("../model/qwen3/merges.txt", "../model/qwen3/vocab.json");
+    // 检查CUDA是否可用并初始化GPU模式
+#ifdef __CUDACC__
+    int deviceCount = 0;
+    cudaError_t error = cudaGetDeviceCount(&deviceCount);
+    if (error == cudaSuccess && deviceCount > 0) {
+        std::cout << "CUDA is available. Using GPU mode." << std::endl;
+        Qwen3 qwen3("../model/qwen3/model.safetensors", TensorDevice::GPU);
+        Tokenizer tokenizer;
+        tokenizer.init("../model/qwen3/merges.txt", "../model/qwen3/vocab.json");
+    } else {
+        std::cout << "CUDA is not available. Using CPU mode." << std::endl;
+        Qwen3 qwen3("../model/qwen3/model.safetensors", TensorDevice::CPU);
+        Tokenizer tokenizer;
+        tokenizer.init("../model/qwen3/merges.txt", "../model/qwen3/vocab.json");
+    }
+#endif
 
     string input = "write a simple python code about 20 lines";
     // // getline(cin,input);

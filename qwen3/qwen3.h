@@ -6,8 +6,9 @@
 #include "tensor.h"
 #include <string>
 #include <vector>
+
 struct  Qwen3 {
-    Qwen3(const std::string& path) : parser(path) {
+    Qwen3(const std::string& path, TensorDevice device = TensorDevice::CPU) : parser(path), device(device) {
         blocks.reserve(block_num);
         for (int i = 0; i < block_num; i++) {
             blocks.emplace_back(num_attention_head, num_kv_head, hidden_dim, true);
@@ -15,6 +16,12 @@ struct  Qwen3 {
         int i = 0;
         lm_head.init(parser, "lm_head", false, true);
         embed_tokens = parser.getTensor("model.embed_tokens.weight");
+        
+        // 设置张量设备
+        if (device == TensorDevice::GPU) {
+            embed_tokens.setDevice(device);
+        }
+        
         for (auto& block : blocks) {
             std::string name = "model.layers." + std::to_string(i) + ".";
             block.input_layernorm.w = parser.getTensor(name + "input_layernorm.weight");
@@ -32,18 +39,44 @@ struct  Qwen3 {
             block.attention.k_norm.w = parser.getTensor(name + "self_attn.k_norm.weight");
             block.attention.q_norm.w = parser.getTensor(name + "self_attn.q_norm.weight");
 
+            // 设置张量设备
+            if (device == TensorDevice::GPU) {
+                block.input_layernorm.w.setDevice(device);
+                block.post_attention_layernorm.w.setDevice(device);
+                block.mlp.down.weight.setDevice(device);
+                block.mlp.gate.weight.setDevice(device);
+                block.mlp.up.weight.setDevice(device);
+                block.attention.k_proj.weight.setDevice(device);
+                block.attention.v_proj.weight.setDevice(device);
+                block.attention.q_proj.weight.setDevice(device);
+                block.attention.out_proj.weight.setDevice(device);
+                block.attention.k_norm.w.setDevice(device);
+                block.attention.q_norm.w.setDevice(device);
+            }
+
             i++;
         }
         norm.w = parser.getTensor("model.norm.weight");
+        
+        // 设置正则化层张量设备
+        if (device == TensorDevice::GPU) {
+            norm.w.setDevice(device);
+            lm_head.weight.setDevice(device);
+        }
     }
 
     Tensor<float> forward(const std::vector<int>& id) {
         Tensor<float> x;
-        x.asShape({(int)id.size(), hidden_dim});
+        x.asShape({(int)id.size(), hidden_dim}, device);
         for (int i = 0; i < id.size(); i++) {
             for (int j = 0; j < hidden_dim; j++) {
                 x.at(i, j) = embed_tokens.at(id[i], j);
             }
+        }
+
+        // 如果使用GPU，将输入移到GPU
+        if (device == TensorDevice::GPU) {
+            x.setDevice(device);
         }
 
         for (auto& block : blocks) {
@@ -65,5 +98,6 @@ struct  Qwen3 {
     RMSNorm<float> norm;
     Tensor<float> embed_tokens;
     ModelParse parser;
+    TensorDevice device;
 
 };
